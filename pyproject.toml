@@ -1,19 +1,22 @@
 [project]
-name = "dataimport-aicare"
+name = "dataimport_aicare"
 version = "0.1.0"
-description = "Add your description here"
+description = "Small package for frequently used functions for the AI-CARE dataset"
 readme = "README.md"
 authors = [
     { name = "Sebastian Germer", email = "sebastian.germer@dfki.de" }
+    { name = "Nina Cassandra Wiegers", email = "nina.wiegers@dfki.de" }
 ]
 requires-python = ">=3.12"
 dependencies = [
     "pandas>=2.3.2",
+    "scikit-learn>=1.7.1",
     "ydata-profiling>=4.16.1",
 ]
+license="MIT"
 
 [project.scripts]
-generate_extra_columns = "dataimport-aicare.generate_extra_columns:main"
+generate_extra_columns = "dataimport_aicare.generate_extra_columns:main"
 
 [build-system]
 requires = ["hatchling"]

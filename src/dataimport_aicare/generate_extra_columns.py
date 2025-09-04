@@ -1,6 +1,6 @@
 import pandas as pd
-from data_loading import import_aicare
-from data_preprocessing import calculate_survival_time_multiregistry
+from .data_loading import import_aicare
+from .data_preprocessing import calculate_survival_time_multiregistry
 import argparse
 
 def getTumors(datapath:str, entity:str) -> pd.DataFrame:
