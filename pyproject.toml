@@ -1,0 +1,20 @@
+[project]
+name = "dataimport-aicare"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Sebastian Germer", email = "sebastian.germer@dfki.de" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pandas>=2.3.2",
+    "ydata-profiling>=4.16.1",
+]
+
+[project.scripts]
+generate_extra_columns = "dataimport-aicare.generate_extra_columns:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
