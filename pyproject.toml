@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Small package for frequently used functions for the AI-CARE dataset"
 readme = "README.md"
 authors = [
-    { name = "Sebastian Germer", email = "sebastian.germer@dfki.de" }
+    { name = "Sebastian Germer", email = "sebastian.germer@dfki.de" },
     { name = "Nina Cassandra Wiegers", email = "nina.wiegers@dfki.de" }
 ]
 requires-python = ">=3.12"
