@@ -150,6 +150,33 @@ def get_histology_grouping_lung(morpho_short: pd.Series):
                 histo_groups.append('Other neoplasm')
     return histo_groups
 
+def get_histology_grouping_breast_alternative(morpho_short: pd.Series):
+    histo_groups = []
+    for code in morpho_short:
+        if pd.isna(code):
+            histo_groups.append(np.nan)
+        else:
+            code = int(code)
+            if code in [8500, 8501, 8502, 8503, 8514, 8521, 8523]:
+                histo_groups.append('Ductal carcinoma')
+            elif code in [8519, 8520, 8524]:
+                histo_groups.append('Lobular carcinoma')
+            elif code  == 8522:
+                histo_groups.append('Mixed ductal and lobular carcinoma')
+            elif code in [8540, 8541, 8542, 8543]:
+                histo_groups.append('M. Paget')
+            elif code in [*range(8140, 8385)]:
+                histo_groups.append('Adenoma or adenocarcinoma')
+            elif code in [*range(8800, 8812), 8830, *range(8840, 8922), 8990, 8991, *range(9040, 9045),
+                        *range(9120, 9134), 9150, *range(9540, 9582)]:
+                histo_groups.append('Sarcoma')
+            elif code in range(8000, 8006):
+                histo_groups.append('Unspecified neoplasm')
+            else:
+                histo_groups.append('Other neoplasm')
+
+            
+
 def get_histology_grouping_breast(morpho_short: pd.Series):
     
     histo_groups = []
@@ -242,7 +269,7 @@ def get_histology_grouping(morpho_short: pd.Series, tumor_entity: str):
     if tumor_entity == "lung":
         histo_groups = get_histology_grouping_lung(morpho_short)
     elif tumor_entity == "breast":
-        histo_groups = get_histology_grouping_breast(morpho_short)
+        histo_groups = get_histology_grouping_breast_alternative(morpho_short)
     elif tumor_entity == "thyroid":
         histo_groups = get_histology_grouping_thyroid(morpho_short)
     elif tumor_entity == "non_hodgkin_lymphoma":
@@ -709,9 +736,6 @@ def determine_uicc_lung(tnm_t, tnm_n, tnm_m, version = '8'):
             return "IVA"
         elif ("1C" == tnm_m):
             return "IVB"
-        # y Fälle, Primärtumor bei OP nicht mehr vorhanden, weil vorher erfolgreich therapiert --> Ausschließen von UICC
-        elif (("0" == tnm_t) and ("0" == tnm_n) and ("0" == tnm_m_short)):
-            return pd.NA
         else:
             return pd.NA
     else:
