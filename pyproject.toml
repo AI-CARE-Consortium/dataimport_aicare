@@ -5,7 +5,7 @@ description = "Small package for frequently used functions for the AI-CARE datas
 readme = "README.md"
 authors = [
     { name = "Sebastian Germer", email = "sebastian.germer@dfki.de" },
-    { name = "Nina Cassandra Wiegers"}
+    { name = "Nina Cassandra Wiegers", email = "nina.wiegers@dfki.de"}
 ]
 requires-python = ">=3.12"
 dependencies = [

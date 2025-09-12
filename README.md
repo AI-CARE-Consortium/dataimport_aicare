@@ -1,5 +1,5 @@
 # Dataimport_AICARE
 
-Submodule for frequently used data loading and preprocessing methods inside of AI-CARE.
+Submodule for frequently used data loading and preprocessing methods inside of the AI-CARE project.
 
-To include it in your project use ```pip install git+https://github.com/AI-CARE-Consortium/dataimport_aicare.git```.
+To include it in your project use ```pip install dataimport-aicare```.
