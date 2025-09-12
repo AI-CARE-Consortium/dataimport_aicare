@@ -174,7 +174,7 @@ def get_histology_grouping_breast_alternative(morpho_short: pd.Series):
                 histo_groups.append('Unspecified neoplasm')
             else:
                 histo_groups.append('Other neoplasm')
-
+    return histo_groups
             
 
 def get_histology_grouping_breast(morpho_short: pd.Series):
