@@ -26,6 +26,9 @@ jobs:
       - name: Install uv
         run: pip install uv
 
+      - name: Update Twine
+        run: pip install twine --upgrade
+
       - name: Install dependencies with uv
         run: uv sync
 
