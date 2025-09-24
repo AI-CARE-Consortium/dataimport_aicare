@@ -817,6 +817,7 @@ def import_aicare(path:str, tumor_entity:str, registry:Union[str, list]=None):
             dataset_dict[i]["morpho_short"] = dataset_dict[i]["morpho_short"].astype(pd.CategoricalDtype())
             dataset_dict[i]["histo_group"] = get_histology_grouping(dataset_dict[i]["morpho_short"], tumor_entity=tumor_entity)
             dataset_dict[i]["histo_group"] = dataset_dict[i]["histo_group"].astype(pd.CategoricalDtype())
+            dataset_dict[i]["Primaerdiagnose_Menge_FM"] = dataset_dict[i].apply(lambda row: (";".join(set(row["Primaerdiagnose_Menge_FM"].split(';'))) if pd.notna(row["Primaerdiagnose_Menge_FM"]) else pd.NA), axis=1)
             print("Tumor Data complete!")
 
         elif i == 'strahlentherapie':
