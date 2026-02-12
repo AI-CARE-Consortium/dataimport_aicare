@@ -2,7 +2,7 @@ from pathlib import Path
 import re
 import pandas as pd
 import numpy as np
-from typing import Dict, Union
+from typing import Dict, Union, Optional, Type
 import datetime
 # ydata profiling imports
 try:
@@ -16,7 +16,7 @@ from tqdm import tqdm
 import warnings
 
 
-def aggregation_function(x: pd.Series) -> pd.Series:
+def aggregation_function(x: pd.Series):
     '''
     Aggregation function for the aggregation of data depending on data type.
     
@@ -34,7 +34,7 @@ def aggregation_function(x: pd.Series) -> pd.Series:
         return x.max()
     return x.iloc[0]
 
-def convert_array_type(col:pd.Series, target) -> pd.Series:
+def convert_array_type(col:pd.Series, target:Type) -> pd.Series:
     '''
     Function to split multiple values in Series 
     and convert them to chosen datatype with convert_single_col
@@ -348,13 +348,13 @@ def gather_tnm_values(row: pd.Series, tumor_entity):
     # else:
     #     return row['pTNM_T'], row['pTNM_N'], row['pTNM_M'], row['pTNM_Version']
 
-def determine_uicc_stage(tumor_df: pd.Series, tumor_entity: str):
+def determine_uicc_stage(tumor_df: pd.DataFrame, tumor_entity: str):
     """
     Determines the uicc stage based on the TNM classification.
     If both p_TNM and c_TNM is available, then p_TNM is preferred.
 
     Parameters:
-        tumor_df (pd.Series): Filtered dataframe for chosen tumor entity.
+        tumor_df (pd.DataFrame): Filtered dataframe for chosen tumor entity.
         tumor_entity (str): Chosen tumor entity.
     """
     if tumor_entity == "non_hodgkin_lymphoma":
@@ -412,7 +412,14 @@ def determine_uicc_stage(tumor_df: pd.Series, tumor_entity: str):
     return tumor_df
 
 # Function to extract Ann-Arbor or ANN-ARBOR-STADIUM stage
-def extract_ann_arbor_stage(row):
+def extract_ann_arbor_stage(row:pd.Series):
+    """
+    Find and extract Ann-Arbor stage for NHL
+    
+    :param row: Dataset Row
+    :type row: pd.Series
+
+    """
     if pd.isna(row["Weitere_Klassifikation_Name"]) or pd.isna(row["Weitere_Klassifikation_Stadium"]):
         return pd.NA
     # Split names and stages
@@ -428,13 +435,8 @@ def extract_ann_arbor_stage(row):
         if ann_arbor_pattern.search(name):  # Check if the name matches the regex
             return stage
     return pd.NA
-    # # Find the stage for Ann-Arbor or ANN-ARBOR-STADIUM
-    # for name, stage in classification_stages.items():
-    #     if name.lower() in ["ann-arbor", "ann-arbor-stadium", "ann arbor", "ann_arbor"]:
-    #         return stage
-    # return None
 
-def determine_uicc_thyroid(tnm_t, tnm_n, tnm_m, icd, age, version = '8'):
+def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, version = '8'):
     """
     Determines uicc stages for breast cancer for each patient.
 
@@ -443,8 +445,7 @@ def determine_uicc_thyroid(tnm_t, tnm_n, tnm_m, icd, age, version = '8'):
     tnm_m: Missing or occurency of metastasis.
     tnm_n: Missing or occurency of metastasis in lymph nodes.
     icd: ICD of the main tumour, to determine, whether tumour is pappilary, follicular, medullary or anaplastic.
-    geb_dat: Birth date of patient.
-    diag_dat: Diagnosis date of patient. Both dates serves to compute the age of the patient.
+    age: Age of the patient (relevant for thyroid cancer) 
     version: Version of the UICC classification.
     """
 
@@ -646,7 +647,7 @@ def determine_uicc_breast(tnm_t:str, tnm_n:str, tnm_m:str, version = '8'):
     else:
         return pd.NA
     
-def determine_uicc_lung(tnm_t, tnm_n, tnm_m, version = '8'):
+def determine_uicc_lung(tnm_t:str, tnm_n:str, tnm_m:str, version = '8'):
     """
     Determines uicc stages for lung cancer for each patient.
 
@@ -733,7 +734,7 @@ def determine_uicc_lung(tnm_t, tnm_n, tnm_m, version = '8'):
 
 
 
-def import_aicare(path:str, tumor_entity:str, registry:Union[str, list]=None):
+def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]]=None):
     '''
     Imports data from csv files and returns a dictionary containing the dataframes.
 
