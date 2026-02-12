@@ -431,7 +431,7 @@ def extract_ann_arbor_stage(row):
     
     # Pair names with stages
     classification_stages = dict(zip(names, stages))
-    ann_arbor_pattern = re.compile(r"ann[\s\-_]?arbor[\s\-_]?stadium?|ann[\s\-_]?arbor", re.IGNORECASE)
+    ann_arbor_pattern = re.compile(r"(ann[\s\-_]?arbor[\s\-_]?stadium|ann[\s\-_]?arbor)$", re.IGNORECASE)
     
     # Find the stage for matching classifications
     for name, stage in classification_stages.items():
