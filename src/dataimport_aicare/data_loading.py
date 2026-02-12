@@ -15,7 +15,6 @@ import os
 from tqdm import tqdm
 import warnings
 
-#from datenimport_aicare.data_preprocessing import tumorDataset 
 
 def aggregation_function(x: pd.Series) -> pd.Series:
     '''
@@ -116,7 +115,6 @@ def convert_all_cols(cols:pd.DataFrame, date_cols:list=[], cat_cols=[], num_cols
                     col not in cat_cols and col not in num_cols]
     new_df.loc[:,other_cols] = cols.loc[:,other_cols].copy()
     
-    # print(new_df)
     return new_df
 
 def get_histology_grouping_lung(morpho_short: pd.Series):
@@ -338,8 +336,6 @@ def gather_tnm_values(row: pd.Series, tumor_entity):
     # else:
     #     row = row.replace(to_replace='X', value='NA')
 
-    # print(row['pTNM_T'], row['pTNM_N'], row['pTNM_M'])
-    # print(row['cTNM_T'], row['cTNM_N'], row['cTNM_M'])
     if (row["pTNM_y"]=="y") or ((pd.isna(row["pTNM_T"]) or row["pTNM_T"] == 'X') and (pd.isna(row["pTNM_N"]) or row["pTNM_N"] == 'X') and (pd.isna(row["pTNM_M"]) or row["pTNM_M"] == 'X')):
         return row['cTNM_T'], row["cTNM_N"], row["cTNM_M"], row["cTNM_Version"]
     elif ((pd.isna(row["pTNM_M"]) or row["pTNM_M"] == 'X') and (row["pTNM_T"] == row["cTNM_T"]) and (row["pTNM_N"] == row["cTNM_N"])):
@@ -373,9 +369,6 @@ def determine_uicc_stage(tumor_df: pd.Series, tumor_entity: str):
 
     for row in tqdm(range(tumor_df.shape[0]), desc="Generating tnm values and uicc stage..."):
 
-        # print(tumor_df.iloc[row]['pTNM_T'], tumor_df.iloc[row]['pTNM_N'], tumor_df.iloc[row]['pTNM_M'])
-        # print(tumor_df.iloc[row]['cTNM_T'], tumor_df.iloc[row]['cTNM_N'], tumor_df.iloc[row]['cTNM_M'])
-
         t, n, m, version = gather_tnm_values(row=tumor_df.iloc[row, :], tumor_entity=tumor_entity)
         if m == 'x' or m == 'X':
             m = '0'
@@ -404,21 +397,18 @@ def determine_uicc_stage(tumor_df: pd.Series, tumor_entity: str):
                                                age=tumor_df.iloc[row]['Alter_bei_Diagnose'],
                                                version = versions[row])
                                                )
-        #print(uicc[-1])
     # append filtered TNM categories
     for tnm_str, tnm_col in ("TNM_T",tnm_t), ("TNM_N",tnm_n), ("TNM_M",tnm_m), ("TNM_Version",versions):
         tumor_df.loc[:, tnm_str] = tnm_col
 
-        # tnm_ser.replace("NA", pd.NA, inplace=True)
        
         tumor_df[tnm_str] = convert_single_col(tumor_df.loc[:, tnm_str], target=pd.CategoricalDtype)
-        # print(tumor_df.loc[:, tnm_str].unique())
+
 
     tumor_df["UICC"] = uicc
     tumor_df["UICC"] = convert_single_col(tumor_df.loc[:, "UICC"], target=pd.CategoricalDtype)
 
     tumor_df["Ann_Arbor"] = ""
-    # print(tumor_df.loc[:, "UICC"].unique())
     return tumor_df
 
 # Function to extract Ann-Arbor or ANN-ARBOR-STADIUM stage
