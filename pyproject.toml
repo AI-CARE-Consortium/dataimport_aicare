@@ -1,6 +1,6 @@
 [project]
 name = "dataimport_aicare"
-version = "0.1.4"
+version = "0.1.5"
 description = "Small package for frequently used functions for the AI-CARE dataset"
 readme = "README.md"
 authors = [
