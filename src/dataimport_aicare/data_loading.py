@@ -117,6 +117,37 @@ def convert_all_cols(cols:pd.DataFrame, date_cols:list=[], cat_cols=[], num_cols
     
     return new_df
 
+def calculate_days_diagnosis_to_treatment(tumor_df: pd.DataFrame, treatment_df: pd.DataFrame, treatment_kind: str):
+    def calculate_row(row, date_col, duration_col):
+        if row["Register_ID_FK"] == "9":
+            return row[duration_col]
+        else:
+            if not pd.isna(row[duration_col]):
+                return row[duration_col]
+            else:
+                duration = (row[date_col] - row["Diagnosedatum"]).days
+                
+            if duration < 0:
+                return pd.NA
+            else:
+                return duration
+
+    
+    treatment_variable_dict = {
+        "OP": ("Datum_OP", "Anzahl_Tage_Diagnose_OP"),
+        "SYST": ("Beginn_SYST", "Anzahl_Tage_Diagnose_SYST"),
+        "ST": ("Beginn_Bestrahlung", "Anzahl_Tage_Diagnose_ST") 
+    }
+
+    date_col, duration_col = treatment_variable_dict[treatment_kind]
+    print(treatment_df.shape)
+    intersection_df = pd.merge(tumor_df, treatment_df, left_on=["Register_ID_FK","Patient_ID_unique", "Tumor_ID"], right_on=["Register_ID_FK", "Patient_ID_unique", "Tumor_ID_FK"], how="right")
+    print(intersection_df.shape)
+    calculated_duration = intersection_df.apply(calculate_row, axis=1, date_col=date_col, duration_col=duration_col)#TODO für morgen!
+    print(calculated_duration.shape)
+    calculated_duration.to_csv(f"./calc_duration_{treatment_kind}.csv")
+    return calculated_duration
+
 def get_histology_grouping_lung(morpho_short: pd.Series):
     """
     Function to get the histology grouping for lung cancer.
@@ -817,6 +848,7 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
             num_cols = ['Anzahl_Tage_Diagnose_ST', 'Anzahl_Tage_ST']
             array_cols = [] #{'name': ['Applikationsspezifikation'], 'type': [pd.StringDtype()]}
             dataset_dict[i] = convert_all_cols(dataset_dict[i], date_cols=date_cols, cat_cols=cat_cols, num_cols=num_cols, array_cols=array_cols)
+            dataset_dict[i]["days_to_treatment_merged"] = calculate_days_diagnosis_to_treatment(dataset_dict["tumor"], dataset_dict[i], "ST").values
             print("Strahlentherapie Data complete!")
 
         elif i == 'systemtherapie':
@@ -825,6 +857,7 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
             array_cols = [] #{'name': ['Substanzen', 'Protokolle'], 'type': [pd.StringDtype(), pd.StringDtype()]}
             num_cols = ['Anzahl_Tage_Diagnose_SYST', 'Anzahl_Tage_SYST']
             dataset_dict[i] = convert_all_cols(dataset_dict[i], date_cols=date_cols, cat_cols=cat_cols, num_cols=num_cols, array_cols=array_cols)
+            dataset_dict[i]["days_to_treatment_merged"] = calculate_days_diagnosis_to_treatment(dataset_dict["tumor"], dataset_dict[i], "SYST").values
             print("Systemtherapie Data complete!")
 
         elif i == 'op':
@@ -833,6 +866,7 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
             num_cols = ['Anzahl_Tage_Diagnose_OP']
             array_cols = [] #{'name': ['Menge_OPS_code', 'Menge_OPS_version'], 'type': [pd.StringDtype(), pd.StringDtype()]}
             dataset_dict[i] = convert_all_cols(dataset_dict[i], date_cols=date_cols, cat_cols=cat_cols, num_cols=num_cols, array_cols=array_cols)
+            dataset_dict[i]["days_to_treatment_merged"] = calculate_days_diagnosis_to_treatment(dataset_dict["tumor"], dataset_dict[i], "OP").values
             print("OP Data complete!")
 
         elif i == 'modul_mamma':

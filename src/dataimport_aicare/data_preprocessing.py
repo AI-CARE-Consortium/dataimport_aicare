@@ -157,35 +157,7 @@ def calculate_survival_time_multiregistry(dataframe: pd.DataFrame,
     survival_time = dataframe.apply(calculate_row, axis=1)
     return survival_time
 
-def calculate_days_diagnosis_to_treatment(tumor_df: pd.DataFrame, treatment_df: pd.DataFrame, treatment_kind: str):
-    def calculate_row(row, date_col, duration_col):
-        if row["Register_ID_FK"] == "9":
-            return row[duration_col]
-        else:
-            if not pd.isna(row[duration_col]):
-                return row[duration_col]
-            else:
-                duration = (row[date_col] - row["Diagnosedatum"]).days
-                
-            if duration < 0:
-                return pd.NA
-            else:
-                return duration
 
-    
-    treatment_variable_dict = {
-        "OP": ("Datum_OP", "Anzahl_Tage_Diagnose_OP"),
-        "SYST": ("Beginn_SYST", "Anzahl_Tage_Diagnose_SYST"),
-        "ST": ("Beginn_Bestrahlung", "Anzahl_Tage_Diagnose_ST") 
-    }
-
-    date_col, duration_col = treatment_variable_dict[treatment_kind]
-
-    intersection_df = pd.merge(tumor_df, treatment_df, left_on=["Register_ID_FK","Patient_ID_unique", "Tumor_ID"], right_on=["Register_ID_FK", "Patient_ID_unique", "Tumor_ID_FK"], how="right")
-
-    calculated_duration = intersection_df.apply(calculate_row, axis=1, date_col=date_col, duration_col=duration_col)#TODO für morgen!
-
-    return calculated_duration
 
 def get_survival_time_alternative(Verstorben, Anzahl_Tage_Diagnose_Tod, Anzahl_Monate_Diagnose_Zensierung):
     """
