@@ -176,7 +176,7 @@ def calculate_days_diagnosis_to_treatment(tumor_df: pd.DataFrame, treatment_df: 
     treatment_variable_dict = {
         "OP": ("Datum_OP", "Anzahl_Tage_Diagnose_OP"),
         "SYST": ("Beginn_SYST", "Anzahl_Tage_Diagnose_SYST"),
-        "ST": ("Beginn_ST", "Anzahl_Tage_Diagnose_ST") 
+        "ST": ("Beginn_Bestrahlung", "Anzahl_Tage_Diagnose_ST") 
     }
 
     date_col, duration_col = treatment_variable_dict[treatment_kind]
