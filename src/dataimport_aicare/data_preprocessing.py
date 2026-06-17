@@ -265,6 +265,47 @@ def get_morphology_groups(morpho_codes: pd.Series, basepath:str, entity:str, ont
     dataframe.to_csv(f"{basepath}/morpho_groups/morpho_groups_{entity}.csv")
     return parentCodes, dataframe
 
+def get_ops_name(ops_codes: pd.Series, basepath:str, ontoserver_url:str):
+    names = []
+    code_dict = {}
+    if os.path.isfile(f"{basepath}/ops_code_dict.csv"):
+        code_dict = pd.read_csv(f"{basepath}/ops_code_dict.csv", index_col=0).to_dict(orient="index")
+    
+    for codes in ops_codes["Menge_OPS_code"]:
+        if not pd.isna(codes):
+            codes = str.split(codes, ";")
+            name_str = []
+            for code in codes:
+                if code in code_dict.keys():
+                    name = code_dict[code]['name']
+                    code_dict[code]["count"] += 1
+                    name_str.append("" if pd.isna(name) else name)
+                else:
+                    
+                    code = code.rstrip("LRB")
+                    lookup_url = f"{ontoserver_url}/CodeSystem/$lookup?system=http://fhir.de/CodeSystem/bfarm/ops&code={code}"
+                    lookup = requests.get(lookup_url).json()
+                    
+                    if lookup['resourceType'] == 'Parameters':
+                        nameCode = lookup['parameter'][1]['valueString']
+
+                        print(f"code: {code} name: {nameCode}")
+                        
+                        code_dict[code] = {'name': nameCode, "count": 1}
+                        name_str.append(nameCode)
+                    else:
+                        name_str.append("")
+                        code_dict[code] = {'name': "", "count": 1}
+            print(name_str)
+            name_str = ";".join(name_str)
+            names.append(name_str)
+        else:
+            names.append(pd.NA)
+    
+    dataframe = pd.DataFrame.from_dict(code_dict).T
+    dataframe.to_csv(f"{basepath}/ops_code_dict.csv")
+    return dataframe, names
+
 def create_timeline_for_patient(data, entity, registry):
 
     """
