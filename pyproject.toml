@@ -1,6 +1,6 @@
 [project]
 name = "dataimport_aicare"
-version = "0.1.9"
+version = "0.1.10"
 description = "Small package for frequently used functions for the AI-CARE dataset"
 readme = "README.md"
 authors = [
@@ -9,9 +9,9 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "ipykernel>=7.4.0",
     "pandas>=2.3.2",
     "scikit-learn>=1.7.1",
-    "ydata-profiling>=4.16.1",
 ]
 license="MIT"
 classifiers = [
@@ -30,6 +30,11 @@ Repository = "https://github.com/AI-CARE-Consortium/dataimport_aicare"
 
 [project.scripts]
 generate_extra_columns = "dataimport_aicare.generate_extra_columns:main"
+
+[project.optional-dependencies]
+profiling = [
+    "ydata-profiling>=4.18.4",
+]
 
 [build-system]
 requires = ["hatchling"]
