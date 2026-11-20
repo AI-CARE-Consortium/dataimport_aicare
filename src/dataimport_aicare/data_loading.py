@@ -140,12 +140,11 @@ def calculate_days_diagnosis_to_treatment(tumor_df: pd.DataFrame, treatment_df: 
     }
 
     date_col, duration_col = treatment_variable_dict[treatment_kind]
-    print(treatment_df.shape)
+
     intersection_df = pd.merge(tumor_df, treatment_df, left_on=["Register_ID_FK","Patient_ID_unique", "Tumor_ID"], right_on=["Register_ID_FK", "Patient_ID_unique", "Tumor_ID_FK"], how="right")
-    print(intersection_df.shape)
+
     calculated_duration = intersection_df.apply(calculate_row, axis=1, date_col=date_col, duration_col=duration_col)#TODO für morgen!
-    print(calculated_duration.shape)
-    calculated_duration.to_csv(f"./calc_duration_{treatment_kind}.csv")
+
     return calculated_duration
 
 def get_histology_grouping_lung(morpho_short: pd.Series):
@@ -855,7 +854,6 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
             # convert datatypes in dataframe patient
             dataset_dict[i] = convert_all_cols(dataset_dict[i], date_cols=date_cols, cat_cols=cat_cols, array_cols=array_cols)
             dataset_dict[i]["Verstorben"] = dataset_dict[i]["Verstorben"].map({'N': 0, 'J': 1})
-            print("Patient Data complete!")
             
         elif i == 'tumor':
             date_cols = ["Diagnosedatum"]
@@ -877,7 +875,6 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
             dataset_dict[i]["histo_group"] = get_histology_grouping(dataset_dict[i]["morpho_short"], tumor_entity=tumor_entity)
             dataset_dict[i]["histo_group"] = dataset_dict[i]["histo_group"].astype(pd.CategoricalDtype())
             dataset_dict[i]["Primaerdiagnose_Menge_FM"] = dataset_dict[i].apply(lambda row: (";".join(set(row["Primaerdiagnose_Menge_FM"].split(';'))) if pd.notna(row["Primaerdiagnose_Menge_FM"]) else pd.NA), axis=1)
-            print("Tumor Data complete!")
 
         elif i == 'strahlentherapie':
             date_cols = ['Beginn_Bestrahlung']
@@ -886,7 +883,6 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
             array_cols = [] #{'name': ['Applikationsspezifikation'], 'type': [pd.StringDtype()]}
             dataset_dict[i] = convert_all_cols(dataset_dict[i], date_cols=date_cols, cat_cols=cat_cols, num_cols=num_cols, array_cols=array_cols)
             dataset_dict[i]["days_to_treatment_merged"] = calculate_days_diagnosis_to_treatment(dataset_dict["tumor"], dataset_dict[i], "ST").values
-            print("Strahlentherapie Data complete!")
 
         elif i == 'systemtherapie':
             date_cols = ['Beginn_SYST']
@@ -895,7 +891,6 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
             num_cols = ['Anzahl_Tage_Diagnose_SYST', 'Anzahl_Tage_SYST']
             dataset_dict[i] = convert_all_cols(dataset_dict[i], date_cols=date_cols, cat_cols=cat_cols, num_cols=num_cols, array_cols=array_cols)
             dataset_dict[i]["days_to_treatment_merged"] = calculate_days_diagnosis_to_treatment(dataset_dict["tumor"], dataset_dict[i], "SYST").values
-            print("Systemtherapie Data complete!")
 
         elif i == 'op':
             date_cols = ['Datum_OP']
@@ -904,13 +899,12 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
             array_cols = [] #{'name': ['Menge_OPS_code', 'Menge_OPS_version'], 'type': [pd.StringDtype(), pd.StringDtype()]}
             dataset_dict[i] = convert_all_cols(dataset_dict[i], date_cols=date_cols, cat_cols=cat_cols, num_cols=num_cols, array_cols=array_cols)
             dataset_dict[i]["days_to_treatment_merged"] = calculate_days_diagnosis_to_treatment(dataset_dict["tumor"], dataset_dict[i], "OP").values
-            print("OP Data complete!")
 
         elif i == 'modul_mamma':
             cat_cols = ['Praetherapeutischer_Menopausenstatus', 'HormonrezeptorStatus_Oestrogen', 'HormonrezeptorStatus_Progesteron', 'Her2neuStatus']
             num_cols = ['TumorgroesseInvasiv', 'TumorgroesseDCIS']
             dataset_dict[i] = convert_all_cols(dataset_dict[i], cat_cols=cat_cols, num_cols=num_cols)
-            print("Modul Data complete!")
+
 
         elif i == 'fe':
             cat_cols = ["Folgeereignis_TNM_Version","Folgeereignis_y_Symbol","Folgeereignis_r_Symbol","Folgeereignis_a_Symbol",\
@@ -924,7 +918,8 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
 
             dataset_dict[i] = convert_all_cols(dataset_dict[i], date_cols=date_cols, cat_cols=cat_cols, num_cols=num_cols, array_cols=array_cols)
             
-            print("FE Data complete!")
+
+        print(f"{i} Data (n={dataset_dict[i].shape[0]}) complete!")
 
     return dataset_dict
 
