@@ -390,7 +390,9 @@ source = { editable = "." }
 dependencies = [
     { name = "ipykernel" },
     { name = "pandas" },
+    { name = "requests" },
     { name = "scikit-learn" },
+    { name = "tqdm" },
 ]
 
 [package.optional-dependencies]
@@ -402,7 +404,9 @@ profiling = [
 requires-dist = [
     { name = "ipykernel", specifier = ">=7.4.0" },
     { name = "pandas", specifier = ">=2.3.2" },
+    { name = "requests", specifier = ">=2.34.2" },
     { name = "scikit-learn", specifier = ">=1.7.1" },
+    { name = "tqdm", specifier = ">=4.70.1" },
     { name = "ydata-profiling", marker = "extra == 'profiling'", specifier = ">=4.18.4" },
 ]
 provides-extras = ["profiling"]
