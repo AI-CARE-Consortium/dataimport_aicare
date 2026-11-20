@@ -343,6 +343,38 @@ def get_tumor_icds(tumor_entity:str):
             warnings.warn('Warning Message: Your input of tumor entity does not match the valid options: lung, breast, thyroid, non_hodgkin_lymphoma.')
 
     return icds
+def apply_uicc_rules(tumor_df, tumor_entity):
+    key_columns = ["TNM_T", "TNM_N", "TNM_M", "TNM_Version"]
+    if tumor_entity == "thyroid":
+        key_columns.append("Primaertumor_Morphologie_ICD_O")
+        key_columns.append("Alter_bei_Diagnose")
+
+    unique_values = tumor_df[key_columns].drop_duplicates().copy()
+
+    if tumor_entity == "lung":
+        unique_values["UICC"] = [
+            determine_uicc_lung(t, n, m, version=v)
+            for t, n, m, v in unique_values.itertuples(index=False, name=None)
+        ]
+    elif tumor_entity == "breast":
+        unique_values["UICC"] = [
+            determine_uicc_breast(t, n, m, version=v)
+            for t, n, m, v in unique_values.itertuples(index=False, name=None)
+        ]
+    elif tumor_entity == "thyroid":
+        unique_values["UICC"] = [
+            determine_uicc_thyroid(t, n, m, version=v, icd=icd, age=age)
+            for t, n, m, v, icd, age in unique_values.itertuples(index=False, name=None)
+        ]
+    else:
+        raise ValueError(f"Unsupported tumor entity: {tumor_entity}")
+
+    return tumor_df.merge(
+        unique_values,
+        on=key_columns,
+        how="left",
+        validate="many_to_one",
+    )
 
 def gather_tnm_values(row: pd.Series, tumor_entity):
     """
@@ -418,25 +450,30 @@ def determine_uicc_stage(tumor_df: pd.DataFrame, tumor_entity: str):
 
         versions.append(version)
 
-        if tumor_entity == 'breast':
-            uicc.append(determine_uicc_breast(tnm_t[row], tnm_n[row], tnm_m[row], version=versions[row]))
-        elif tumor_entity == 'lung':
-            uicc.append(determine_uicc_lung(tnm_t[row], tnm_n[row], tnm_m[row], version=versions[row]))
-        elif tumor_entity == 'thyroid':
-            uicc.append(determine_uicc_thyroid(tnm_t[row], tnm_n[row], tnm_m[row],
-                                               icd = tumor_df.iloc[row]['Primaertumor_Morphologie_ICD_O'], 
-                                               age=tumor_df.iloc[row]['Alter_bei_Diagnose'],
-                                               version = versions[row])
-                                               )
+        # if tumor_entity == 'breast':
+        #     uicc.append(determine_uicc_breast(tnm_t[row], tnm_n[row], tnm_m[row], version=versions[row]))
+        # elif tumor_entity == 'lung':
+        #     uicc.append(determine_uicc_lung(tnm_t[row], tnm_n[row], tnm_m[row], version=versions[row]))
+        # elif tumor_entity == 'thyroid':
+        #     uicc.append(determine_uicc_thyroid(tnm_t[row], tnm_n[row], tnm_m[row],
+        #                                        icd = tumor_df.iloc[row]['Primaertumor_Morphologie_ICD_O'], 
+        #                                        age=tumor_df.iloc[row]['Alter_bei_Diagnose'],
+        #                                        version = versions[row])
+        #                                        )
+    
     # append filtered TNM categories
+
     for tnm_str, tnm_col in ("TNM_T",tnm_t), ("TNM_N",tnm_n), ("TNM_M",tnm_m), ("TNM_Version",versions):
         tumor_df.loc[:, tnm_str] = tnm_col
 
        
         tumor_df[tnm_str] = convert_single_col(tumor_df.loc[:, tnm_str], target=pd.CategoricalDtype)
 
+    
+    tumor_df = apply_uicc_rules(tumor_df, tumor_entity)
 
-    tumor_df["UICC"] = uicc
+
+    #tumor_df["UICC"] = uicc
     tumor_df["UICC"] = convert_single_col(tumor_df.loc[:, "UICC"], target=pd.CategoricalDtype)
 
     tumor_df["Ann_Arbor"] = ""
@@ -1086,3 +1123,6 @@ if has_ydata:
             config_file = Path(__file__).parent.join("minimal_config.yaml")
         profile = ProfileReport(data, title=name+" Report", explorative=True, config_file=config_file)
         profile.to_file(name+"_report.html")
+else:
+    def generate_report(data: pd.DataFrame, name: str, config_file: str):
+        print("ydata-profiling is not installed. Please install ydata-profiling to use this function.")
