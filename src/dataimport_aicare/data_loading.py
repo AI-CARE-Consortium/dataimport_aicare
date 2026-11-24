@@ -420,52 +420,74 @@ def determine_uicc_stage(tumor_df: pd.DataFrame, tumor_entity: str):
         tumor_entity (str): Chosen tumor entity.
     """
     if tumor_entity == "non_hodgkin_lymphoma":
+        tumor_df = tumor_df.copy()
         tumor_df["TNM_T"] = ""
         tumor_df["TNM_N"] = ""
         tumor_df["TNM_M"] = ""
         tumor_df["UICC"] = ""
-        tumor_df["Ann_Arbor"] = tumor_df.apply(extract_ann_arbor_stage, axis=1)
+        tumor_df["Ann_Arbor"] = tumor_df.apply(
+            extract_ann_arbor_stage,
+            axis=1,
+        )
         return tumor_df
-    tnm_m, tnm_n, tnm_t, versions = [], [], [], []
-    uicc = []
 
-    for row in tqdm(range(tumor_df.shape[0]), desc="Generating tnm values and uicc stage..."):
+    tumor_df = tumor_df.copy()
 
-        t, n, m, version = gather_tnm_values(row=tumor_df.iloc[row, :], tumor_entity=tumor_entity)
-        if m == 'x' or m == 'X':
-            m = '0'
-        if pd.isna(version):
-            if pd.isna(tumor_df.iloc[row, :]["Diagnosedatum"]):
-                version = "8"
-            #print(tumor_df.iloc[row, :]["Diagnosedatum"])
-            else:
-                if pd.to_datetime(tumor_df.iloc[row, :]["Diagnosedatum"]).date() > datetime.date(2017, 12, 31):
-                    version = "8"
-                else: 
-                    version = "7"
-        tnm_t.append(t)
-        tnm_m.append(m)
-        tnm_n.append(n)
+    p_t = tumor_df["pTNM_T"].astype("string")
+    p_n = tumor_df["pTNM_N"].astype("string")
+    p_m = tumor_df["pTNM_M"].astype("string")
+    c_t = tumor_df["cTNM_T"].astype("string")
+    c_n = tumor_df["cTNM_N"].astype("string")
 
-        versions.append(version)
+    p_missing = (
+        p_t.isna() | p_t.eq("X").fillna(False)
+    ) & (
+        p_n.isna() | p_n.eq("X").fillna(False)
+    ) & (
+        p_m.isna() | p_m.eq("X").fillna(False)
+    )
 
-        # if tumor_entity == 'breast':
-        #     uicc.append(determine_uicc_breast(tnm_t[row], tnm_n[row], tnm_m[row], version=versions[row]))
-        # elif tumor_entity == 'lung':
-        #     uicc.append(determine_uicc_lung(tnm_t[row], tnm_n[row], tnm_m[row], version=versions[row]))
-        # elif tumor_entity == 'thyroid':
-        #     uicc.append(determine_uicc_thyroid(tnm_t[row], tnm_n[row], tnm_m[row],
-        #                                        icd = tumor_df.iloc[row]['Primaertumor_Morphologie_ICD_O'], 
-        #                                        age=tumor_df.iloc[row]['Alter_bei_Diagnose'],
-        #                                        version = versions[row])
-        #                                        )
-    
-    # append filtered TNM categories
+    p_m_missing = p_m.isna() | p_m.eq("X").fillna(False)
+
+    use_c_tnm = (
+        tumor_df["pTNM_y"].str.upper().eq("Y").fillna(False)
+        | p_missing.fillna(False)
+        | (
+            p_m_missing.fillna(False)
+            & p_t.eq(c_t).fillna(False)
+            & p_n.eq(c_n).fillna(False)
+        )
+    ).fillna(False)
+
+    tnm_t = c_t.where(use_c_tnm, p_t)
+    tnm_n = c_n.where(use_c_tnm, p_n)
+    tnm_m = tumor_df["cTNM_M"].astype("string").where(use_c_tnm, p_m)
+    versions = tumor_df["cTNM_Version"].astype("string").where(
+        use_c_tnm,
+        tumor_df["pTNM_Version"].astype("string"),
+    )
+
+    tnm_m = tnm_m.mask(tnm_m.str.upper().eq("X").fillna(False), "0")
+
+    diagnosed = pd.to_datetime(
+        tumor_df["Diagnosedatum"],
+        errors="coerce",
+    )
+
+    default_versions = pd.Series(
+        np.where(
+            diagnosed.isna() | diagnosed.gt("2017-12-31"),
+            "8",
+            "7",
+        ),
+        index=tumor_df.index,
+    )
+    versions = versions.fillna(default_versions)
 
     for tnm_str, tnm_col in ("TNM_T",tnm_t), ("TNM_N",tnm_n), ("TNM_M",tnm_m), ("TNM_Version",versions):
         tumor_df.loc[:, tnm_str] = tnm_col
 
-       
+        tumor_df[tnm_str] = tumor_df[tnm_str].fillna(np.nan)
         tumor_df[tnm_str] = convert_single_col(tumor_df.loc[:, tnm_str], target=pd.CategoricalDtype)
 
     
@@ -503,6 +525,10 @@ def extract_ann_arbor_stage(row:pd.Series):
             return stage
     return pd.NA
 
+def _tnm_text(value: object) -> str:
+    return "" if pd.isna(value) else str(value)
+
+
 def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, version = '8'):
     """
     Determines uicc stages for breast cancer for each patient.
@@ -517,6 +543,10 @@ def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, ve
     """
 
     cancer_type = ""
+    tnm_t = _tnm_text(tnm_t)
+    tnm_n = _tnm_text(tnm_n)
+    tnm_m = _tnm_text(tnm_m)
+    version = _tnm_text(version)
 
     if pd.isna(icd):
         return pd.NA
@@ -535,19 +565,19 @@ def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, ve
     else:
         #warnings.warn('No cancer type could be detected.')
         return pd.NA
-    tnm_t_short = str(tnm_t)[0]
-    tnm_n_short = str(tnm_n)[0]
-    tnm_m_short = str(tnm_m)[0]
+    tnm_t_short = tnm_t[:1]
+    tnm_n_short = tnm_n[:1]
+    tnm_m_short = tnm_m[:1]
 
     if version == '7':
-        if (cancer_type in ['follicular', 'papillary']) and (age < 45):
+        if (cancer_type in ['follicular', 'papillary']) and pd.notna(age) and (age < 45):
             if '0' == tnm_m_short:
                 return 'I' 
             elif '1' == tnm_m_short:
                 return 'II'
             else:
                 return pd.NA
-        elif (cancer_type in ['follicular', 'papillary']) and (age >= 45):
+        elif (cancer_type in ['follicular', 'papillary']) and pd.notna(age) and (age >= 45):
             if ((tnm_t in ['1A', '1B']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
                 return 'I'
             elif (tnm_t == '2') and ('0' == tnm_n) and ('0' == tnm_m_short):
@@ -593,14 +623,14 @@ def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, ve
                 return pd.NA
             
     elif version == '8':
-        if (cancer_type in ['follicular', 'papillary']) and (age < 55):
+        if (cancer_type in ['follicular', 'papillary']) and pd.notna(age) and (age < 55):
             if '0' == tnm_m_short:
                 return 'I' 
             elif '1' == tnm_m_short:
                 return 'II'
             else:
                 return pd.NA
-        elif (cancer_type in ['follicular', 'papillary']) and (age >= 55):
+        elif (cancer_type in ['follicular', 'papillary']) and pd.notna(age) and (age >= 55):
             if ((tnm_t in ['1A', '1B', '2']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
                 return 'I'
             elif ((('3' == tnm_t_short) and ('0' == tnm_n) and ('0' == tnm_m_short)) or ((tnm_t_short in ['1', '2', '3']) and ('1' == tnm_n_short) and ('0' == tnm_m_short))):
@@ -655,9 +685,13 @@ def determine_uicc_breast(tnm_t:str, tnm_n:str, tnm_m:str, version = '8'):
     tnm_n: Missing or occurency of metastasis in lymph nodes.
     version: Version of the UICC classification.
     """
-    tnm_t_short = str(tnm_t)[0]
-    tnm_n_short = str(tnm_n)[0]
-    tnm_m_short = str(tnm_m)[0]
+    tnm_t = _tnm_text(tnm_t)
+    tnm_n = _tnm_text(tnm_n)
+    tnm_m = _tnm_text(tnm_m)
+    version = _tnm_text(version)
+    tnm_t_short = tnm_t[:1]
+    tnm_n_short = tnm_n[:1]
+    tnm_m_short = tnm_m[:1]
     if version == '7':
         if ("0" == tnm_t) and ("0" == tnm_n) and ("0" == tnm_m_short):
             return "0"
@@ -725,7 +759,11 @@ def determine_uicc_lung(tnm_t:str, tnm_n:str, tnm_m:str, version = '8'):
     version: Version of the UICC classification.
     """
     # determine uicc stage
-    tnm_m_short = str(tnm_m)[0]
+    tnm_t = _tnm_text(tnm_t)
+    tnm_n = _tnm_text(tnm_n)
+    tnm_m = _tnm_text(tnm_m)
+    version = _tnm_text(version)
+    tnm_m_short = tnm_m[:1]
     if version == '7':
         if ("X" == tnm_t) and ("0" == tnm_n) and ("0" == tnm_m_short):
             return "OKK"
@@ -856,6 +894,7 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
             dataset_dict[i]["Verstorben"] = dataset_dict[i]["Verstorben"].map({'N': 0, 'J': 1})
             
         elif i == 'tumor':
+            
             date_cols = ["Diagnosedatum"]
             cat_cols = ["Inzidenzort","Diagnosesicherung","Primaertumor_ICD","Primaertumor_ICD_Version","Primaertumor_Topographie_ICD_O","Primaertumor_Topographie_ICD_O_Version",
                         "Primaertumor_Morphologie_ICD_O","Primaertumor_Morphologie_ICD_O_Version","Primaertumor_Grading","cTNM_Version",
