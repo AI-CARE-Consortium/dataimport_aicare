@@ -345,7 +345,7 @@ def get_tumor_icds(tumor_entity:str):
 def apply_uicc_rules(tumor_df, tumor_entity):
     key_columns = ["TNM_T", "TNM_N", "TNM_M", "TNM_Version"]
     if tumor_entity == "thyroid":
-        key_columns.append("Primaertumor_Morphologie_ICD_O")
+        key_columns.append("histo_group")
         key_columns.append("Alter_bei_Diagnose")
 
     unique_values = tumor_df[key_columns].drop_duplicates().copy()
@@ -362,8 +362,8 @@ def apply_uicc_rules(tumor_df, tumor_entity):
         ]
     elif tumor_entity == "thyroid":
         unique_values["UICC"] = [
-            determine_uicc_thyroid(t, n, m, version=v, icd=icd, age=age)
-            for t, n, m, v, icd, age in unique_values.itertuples(index=False, name=None)
+            determine_uicc_thyroid(t, n, m, version=v, histo_group=histo_group, age=age)
+            for t, n, m, v, histo_group, age in unique_values.itertuples(index=False, name=None)
         ]
     else:
         raise ValueError(f"Unsupported tumor entity: {tumor_entity}")
@@ -529,56 +529,40 @@ def _tnm_text(value: object) -> str:
     return "" if pd.isna(value) else str(value)
 
 
-def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, version = '8'):
+
+def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, histo_group:str, age:int, version = '8'):
     """
-    Determines uicc stages for breast cancer for each patient.
+    Determines uicc stages for thyroid cancer for each patient.
 
     Parameters:
     tnm_t: Classification of tumour.
     tnm_m: Missing or occurency of metastasis.
     tnm_n: Missing or occurency of metastasis in lymph nodes.
-    icd: ICD of the main tumour, to determine, whether tumour is pappilary, follicular, medullary or anaplastic.
+    histo_group: Histological group of the tumour.
     age: Age of the patient (relevant for thyroid cancer) 
     version: Version of the UICC classification.
     """
 
-    cancer_type = ""
     tnm_t = _tnm_text(tnm_t)
     tnm_n = _tnm_text(tnm_n)
     tnm_m = _tnm_text(tnm_m)
     version = _tnm_text(version)
+    histo_group = _tnm_text(histo_group)
 
-    if pd.isna(icd):
-        return pd.NA
-    else:
-        # split /3 of string
-        icd = icd.split('/')[0]
-    
-    if icd in ['8290', '8330', '8331', '8332', '8333', '8334', '8335', '8337', '8339']:
-        cancer_type = 'follicular'
-    elif (icd in ['8050', '8260', '8350']) or (icd in [str(x) for x in list(range(8340, 8345))]) or (icd in [str(x) for x in list(range(8450, 8461))]): 
-        cancer_type = 'papillary'
-    elif (icd in ['8345', '8346']) or (icd in [str(x) for x in list(range(8510, 8514))]):
-        cancer_type = 'medullary'
-    elif icd in [str(x) for x in list(range(8020, 8036))]:
-        cancer_type = 'anaplastic'
-    else:
-        #warnings.warn('No cancer type could be detected.')
-        return pd.NA
     tnm_t_short = tnm_t[:1]
     tnm_n_short = tnm_n[:1]
     tnm_m_short = tnm_m[:1]
 
     if version == '7':
-        if (cancer_type in ['follicular', 'papillary']) and pd.notna(age) and (age < 45):
+        if (histo_group in ['Follicular carcinoma', 'Papillary carcinoma']) and pd.notna(age) and (age < 45):
             if '0' == tnm_m_short:
                 return 'I' 
             elif '1' == tnm_m_short:
                 return 'II'
             else:
                 return pd.NA
-        elif (cancer_type in ['follicular', 'papillary']) and pd.notna(age) and (age >= 45):
-            if ((tnm_t in ['1A', '1B']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
+        elif (histo_group in ['Follicular carcinoma', 'Papillary carcinoma']) and pd.notna(age) and (age >= 45):
+            if ((tnm_t in ['1', '1A', '1B']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
                 return 'I'
             elif (tnm_t == '2') and ('0' == tnm_n) and ('0' == tnm_m_short):
                 return 'II'
@@ -593,8 +577,8 @@ def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, ve
             else:
                 return pd.NA
             
-        elif cancer_type == 'medullary':
-            if ((tnm_t in ['1A', '1B']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
+        elif histo_group == 'Medullary carcinoma':
+            if ((tnm_t in ['1', '1A', '1B']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
                 return 'I'
             elif ((tnm_t_short in ['2', '3']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
                 return 'II'
@@ -609,7 +593,7 @@ def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, ve
                 return 'IVC'
             else:
                 return pd.NA
-        elif cancer_type == 'anaplastic':
+        elif histo_group == 'Anaplastic carcinoma':
             if (('4A' == tnm_t) and ('0' == tnm_m_short)):
                 return 'IVA'
             elif (('4B' == tnm_t) and ('0' == tnm_m_short)):
@@ -623,15 +607,15 @@ def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, ve
                 return pd.NA
             
     elif version == '8':
-        if (cancer_type in ['follicular', 'papillary']) and pd.notna(age) and (age < 55):
+        if (histo_group in ['Follicular carcinoma', 'Papillary carcinoma']) and pd.notna(age) and (age < 55):
             if '0' == tnm_m_short:
                 return 'I' 
             elif '1' == tnm_m_short:
                 return 'II'
             else:
                 return pd.NA
-        elif (cancer_type in ['follicular', 'papillary']) and pd.notna(age) and (age >= 55):
-            if ((tnm_t in ['1A', '1B', '2']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
+        elif (histo_group in ['Follicular carcinoma', 'Papillary carcinoma']) and pd.notna(age) and (age >= 55):
+            if ((tnm_t in ['1', '1A', '1B', '2']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
                 return 'I'
             elif ((('3' == tnm_t_short) and ('0' == tnm_n) and ('0' == tnm_m_short)) or ((tnm_t_short in ['1', '2', '3']) and ('1' == tnm_n_short) and ('0' == tnm_m_short))):
                 return 'II'
@@ -643,8 +627,8 @@ def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, ve
                 return 'IVB'
             else:
                 return pd.NA
-        elif cancer_type == 'medullary':
-            if ((tnm_t in ['1A', '1B']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
+        elif histo_group == 'Medullary carcinoma':
+            if ((tnm_t in ['1', '1A', '1B']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
                 return 'I'
             elif ((tnm_t_short in ['2', '3']) and ('0' == tnm_n) and ('0' == tnm_m_short)):
                 return 'II'
@@ -659,7 +643,7 @@ def determine_uicc_thyroid(tnm_t:str, tnm_n:str, tnm_m:str, icd:str, age:int, ve
                 return 'IVC'
             else:
                 return pd.NA
-        elif cancer_type == 'anaplastic':
+        elif histo_group == 'Anaplastic carcinoma':
             if (((tnm_t_short in ['1', '2']) or (tnm_t == '3A')) and ('0' == tnm_n) and ('0' == tnm_m_short)):
                 return 'IVA'
             elif (((tnm_t_short in ['1', '2']) or (tnm_t == '3A')) and ('1' == tnm_n_short) and ('0' == tnm_m_short)):
@@ -908,11 +892,12 @@ def import_aicare(path:str, tumor_entity:str, registry:Optional[Union[str, list]
             
 
             # add uicc column
-            dataset_dict[i] = determine_uicc_stage(tumor_df=dataset_dict[i], tumor_entity=tumor_entity)
             dataset_dict[i]["morpho_short"] = get_morpho_short(dataset_dict[i]["Primaertumor_Morphologie_ICD_O"])
             dataset_dict[i]["morpho_short"] = dataset_dict[i]["morpho_short"].astype(pd.CategoricalDtype())
             dataset_dict[i]["histo_group"] = get_histology_grouping(dataset_dict[i]["morpho_short"], tumor_entity=tumor_entity)
             dataset_dict[i]["histo_group"] = dataset_dict[i]["histo_group"].astype(pd.CategoricalDtype())
+            dataset_dict[i] = determine_uicc_stage(tumor_df=dataset_dict[i], tumor_entity=tumor_entity)
+
             dataset_dict[i]["Primaerdiagnose_Menge_FM"] = dataset_dict[i].apply(lambda row: (";".join(set(row["Primaerdiagnose_Menge_FM"].split(';'))) if pd.notna(row["Primaerdiagnose_Menge_FM"]) else pd.NA), axis=1)
 
         elif i == 'strahlentherapie':
